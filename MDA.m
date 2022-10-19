@@ -16,13 +16,13 @@ while tf1
         case 'Process Maestro XML'
             processMaestroXML;
         case 'Make Summary File (existing)'
-            [maestro_data,MVI_path] = combineTables(MVI_path);
+            [maestro_data,MVI_path] = combineMaestroTables(MVI_path);
         case  'Make Summary File (rerun without plots)'
             MVI_path = rerunAllMaestro(MVI_path,0);
-            [maestro_data,MVI_path] = combineTables(MVI_path);
+            [maestro_data,MVI_path] = combineMaestroTables(MVI_path);
         case 'Make Summary File (rerun with plots)'
             MVI_path = rerunAllMaestro(MVI_path,1);
-            [maestro_data,MVI_path] = combineTables(MVI_path);
+            [maestro_data,MVI_path] = combineMaestroTables(MVI_path);
         case 'Plot MVI IFT'
             
     end
