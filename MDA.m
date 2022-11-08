@@ -33,4 +33,4 @@ while tf1
         resp1 = opts{ind1}; 
     end
 end
-disp('QOLA instance ended.')
+disp('MDA instance ended.')
