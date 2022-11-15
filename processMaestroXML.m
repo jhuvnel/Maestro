@@ -37,7 +37,7 @@ if isempty(vis)
     vis = vis{:};
 end
 %% IFT/eIFT Data Extraction
-exp_start = find(contains(fdata,'IFT'));
+exp_start = find(contains(fdata,'TelemetryData CreateDate'));
 if ~isempty(exp_start)
     exp_end = find(contains(fdata,{'/TelemetryData','/ExpertTelemetryData'}));
     impedance_data = [cell2table(repmat([{sub},{vis}],length(exp_start),1),'VariableNames',{'Subject','Visit'}),...
@@ -121,7 +121,7 @@ else
     txt = '';
 end
 %% ART
-ART_names = find(contains(fdata,'Name="ART'));
+ART_names = find(contains(fdata,'ArtData Create'));
 if ~isempty(ART_names) % no ART
     txt = [txt,newline,newline,'eCAP/ART Measurements',newline,newline];
     names = cell(length(ART_names),1);
@@ -147,8 +147,8 @@ if ~isempty(ART_names) % no ART
                 'Measurement Gap = ',meas_gap,'ms',newline,...
                 'Levels = ',amp_lev,newline];
         elseif any(contains(rel_text,'Masker')) %Masker/Probe type
-            mask_curr = extractXMLdataline(rel_text{contains(rel_text,'Mask')});
-            probe_curr = extractXMLdataline(rel_text{contains(rel_text,'Probe')});
+            mask_curr = extractXMLdataline(rel_text{contains(rel_text,'Masker Unit')});
+            probe_curr = extractXMLdataline(rel_text{contains(rel_text,'Probe Unit')});
             phase_dur = num2str(str2double(extractXMLdataline(rel_text{contains(rel_text,'PhaseDuration')}))*10^6);
             iter = extractXMLdataline(rel_text{contains(rel_text,'Iterations')});
             meas_delay = num2str(str2double(extractXMLdataline(rel_text{contains(rel_text,'MeasurementDelay')}))*10^6);

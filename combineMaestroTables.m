@@ -22,8 +22,12 @@ for i = 1:length(MaestroDir)
         all_ART_tabs{i} = ART_data;
     end   
 end
-maestro_data.IFT = sortrows(sortrows(vertcat(all_IFT_tabs{:}),'Date','Ascend'),'Subject','Ascend');
-maestro_data.eIFT = sortrows(sortrows(vertcat(all_eIFT_tabs{:}),'Date','Ascend'),'Subject','Ascend');
+temp = sortrows(vertcat(all_IFT_tabs{:}),'Date','Ascend');
+[~,ind] = unique(temp);
+maestro_data.IFT = sortrows(sortrows(temp(ind,:),'Date','Ascend'),'Subject','Ascend');
+temp = sortrows(vertcat(all_eIFT_tabs{:}),'Date','Ascend');
+[~,ind] = unique(temp);
+maestro_data.eIFT = sortrows(sortrows(temp(ind,:),'Date','Ascend'),'Subject','Ascend');
 maestro_data.ART = sortrows(sortrows(vertcat(all_ART_tabs{:}),'Date','Ascend'),'Subject','Ascend');
 save([MVI_path,filesep,'ALLMVI-MaestroResults.mat'],'maestro_data')
 end
