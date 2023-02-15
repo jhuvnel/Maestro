@@ -117,8 +117,10 @@ if ~isempty(exp_start)
         saveas(fig,[Maestro_Path,filesep,sub,'-',vis,'-IFT.png'])
         close;
     end
+    max_date_IFT = max(impedance_data.Date);
 else
     txt = '';
+    max_date_IFT = NaT;
 end
 %% ART
 ART_names = find(contains(fdata,'ArtData Create'));
@@ -256,8 +258,23 @@ if ~isempty(ART_names) % no ART
             end
         end
     end
+    max_date_ART = max(ART_data.Date);
+else
+    max_date_ART = NaT;
 end
 %% Save .txt file
+max_date = max([max_date_IFT,max_date_ART]);
+if isnat(max_date)
+    date = '';
+    time = '';
+else
+    date = datestr(max_date,'yyyy-mm-dd');
+    time = datestr(max_date,'HH:MM');
+end
+txt = ['Subject: ',sub,newline,'Visit: ',vis,...
+    ' Date: ',date,' Time: ',time,newline,...
+    'Condition/Implant Setting: Off',newline,...
+    'Experimenter: ',newline,newline,txt];
 %Write the text file and end the script
 fid = fopen([Maestro_Path,filesep,'SubjectInfo.txt'],'w');
 fprintf(fid,'%s',txt);
