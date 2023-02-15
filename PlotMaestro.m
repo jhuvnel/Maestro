@@ -146,5 +146,48 @@ title(h1,'Maestro Impedance Data (302.4 cu, 26.67\mus)','FontSize',14)
 ylabel(h1,'Impedance (k\Omegas)');
 xlabel(h1,'Electrode Number');
 
-%%
+%% Plot figure for each patient
+% The position of annotation needs to be recalculated.
+row_num = 1;
+%Axes Sizing Parameters
+xmin = 0.12;
+xspac = 0;
+xmax = 0.97;
+ymin = 0.15;
+ymax = 0.94;
+yspac = 0;
 
+xwid = xmax-xmin-xspac;
+xpos = xmin;
+ywid = ymax-ymin-(row_num-1)*yspac;
+ypos = ymin;
+
+xtic_gap = xwid/18;
+r = 1.3*xtic_gap;
+%Writing a formula for the dimenstions of the annotation
+circ_dim = @(i,enum) [((enum-3)*2+1)*xtic_gap-0.4*r+xpos,ypos-1.3*r,3/4*r,r];
+
+for i = 1:patient_num
+    Fig_i = figure(i+3);
+    set(Fig_i,'Color',[1,1,1],'Units','inches','Position',[2.5 2.5 4 3])
+    %Transpose patient data so that in the event that the number of time
+    %points equals the number of electrodes, MATLAB knows which dimension
+    %to plot across.
+    patient_impedance = IFT_Data{contains(IFT_Data.Subject,all_subjects{i}),6:14}';
+    plot(3:11,patient_impedance/1000,'-o')
+    leg1 = legend(IFT_Data.Visit(contains(IFT_Data.Subject,all_subjects{i})),...
+        'Location','south','NumColumns',5,'FontSize',6,'box','off');
+    leg1.ItemTokenSize(1) = 9; 
+    ylabel('Impedance (k\Omegas)');
+    xlabel('Electrode Number');
+    title(strcat(all_subjects{i}(1:6),' Maestro Impedance Data (302.4 cu, 26.67\mus)'),'FontSize',10,'FontWeight','bold')
+    set(gca,'Color',[1,1,1],'YLim',[-4 18],'Xlim',[2.5 11.5])
+    set(gca,'xtick',3:11,'xticklabel',cellfun(@num2str,num2cell(3:11),'UniformOutput',false))
+    
+    set(gca,'Position',[xpos,ypos,xwid,ywid]);
+    for j = 1:6
+        if ~isnan(Electrode(i,j))
+            annotation('ellipse',circ_dim(i,Electrode(i,j)),'Color',circ_col(j,:),'LineStyle',circ_lin{i});
+        end
+    end   
+end
