@@ -1,11 +1,17 @@
 function processMaestroXML(Maestro_Path,make_plots)
+close all;
 if nargin < 2 ||~isnumeric(make_plots)
     make_plots = 1; %Default is to plot
 end
-if nargin < 1 ||isempty(Maestro_Path)
-    prompt = 'Select the Maestro folder.';
-    Maestro_Path = uigetdir(prompt,prompt);
+if nargin < 1 || isempty(Maestro_Path)
+    if contains(cd,'Maestro')
+        Maestro_Path = cd;
+    else
+        prompt = 'Select the Maestro folder.';
+        Maestro_Path = uigetdir(prompt,prompt);
+    end
 end
+examiner = 'CFB, MRC, EOV'; %for the CRF
 %Find and select the .xml file to analyze (only expecting one per visit)
 files = extractfield(dir([Maestro_Path,filesep,'*.xml']),'name');
 if isempty(files)
@@ -17,7 +23,7 @@ elseif length(files)>1 %concetenate them into one file
         fname = files{i};
         cell_fdata(i) = {cellstr(readlines([Maestro_Path,filesep,fname]))};
     end
-    fdata = vertcat(cell_fdata{:});   
+    fdata = vertcat(cell_fdata{:});
 else
     fname = files{:};
     fdata = cellstr(readlines([Maestro_Path,filesep,fname]));
@@ -43,10 +49,7 @@ if ~isempty(exp_start)
     impedance_data = [cell2table(repmat([{sub},{vis}],length(exp_start),1),'VariableNames',{'Subject','Visit'}),...
         array2table(NaT(length(exp_start),1),'VariableNames',{'Date'}),...
         array2table(NaN(length(exp_start),11),'VariableNames',{'Current_cu','Duration_us','E3','E4','E5','E6','E7','E8','E9','E10','E11'})];
-    names = cell(length(exp_start),1);
     rm_row = false(length(exp_start),1);
-    % Start the text file with the info
-    txt = ['Impedance Measurement (MVI)',newline,newline];
     for i = 1:length(exp_start)
         rel_text = fdata(exp_start(i):exp_end(i));
         rel_lines = false(9,1);
@@ -80,8 +83,6 @@ if ~isempty(exp_start)
                 dur = extractXMLdataline(dur_str);
             end
             impedance_data{i,5} = str2double(dur)*10^6;
-            exp_name = date_str((strfind(date_str,'Name=')+6):(strfind(date_str,'Creating')-3));
-            names{i} = [exp_name,': ',num2str(str2double(dur)*10^6),'us, ',curr,'cu'];
             for j = 3:11
                 imp_str = rel_text{find(contains(rel_text,['Number="',num2str(j),'"']))+1};
                 imp = extractXMLdataline(imp_str);
@@ -92,10 +93,7 @@ if ~isempty(exp_start)
         end
     end
     impedance_data(rm_row,:) = [];
-    names(rm_row) = [];
     save([Maestro_Path,filesep,'IFT-Results.mat'],'impedance_data')
-    names = join(names,newline);
-    txt = [txt,names{:}];
     if make_plots
         % Make IFT/eIFT plots with the values
         labs = cellfun(@num2str,num2cell(impedance_data{:,4:5}),'UniformOutput',false);
@@ -117,65 +115,12 @@ if ~isempty(exp_start)
         saveas(fig,[Maestro_Path,filesep,sub,'-',vis,'-IFT.png'])
         close;
     end
-    max_date_IFT = max(impedance_data.Date);
+    date_IFT = char(min(impedance_data.Date));
 else
-    txt = '';
-    max_date_IFT = NaT;
+    date_IFT = '';
 end
 %% ART
-ART_names = find(contains(fdata,'ArtData Create'));
-if ~isempty(ART_names) % no ART
-    txt = [txt,newline,newline,'eCAP/ART Measurements',newline,newline];
-    names = cell(length(ART_names),1);
-    for i = 1:length(ART_names)
-        rel_text = fdata(ART_names(i)+(0:50));
-        rel_str = rel_text{1};
-        exp_name = rel_str((strfind(rel_str,'Name=')+6):(strfind(rel_str,'Creating')-3));
-        if any(contains(rel_text,'Setup FunctionType="AmplitudeGrowth"')) %Classic Amplitude Growth ART
-            max_curr = extractXMLdataline(rel_text{contains(rel_text,'Maximum')});
-            min_curr = extractXMLdataline(rel_text{contains(rel_text,'Minimum')});
-            phase_dur = num2str(str2double(extractXMLdataline(rel_text{contains(rel_text,'PhaseDuration')}))*10^6);
-            iter = extractXMLdataline(rel_text{contains(rel_text,'Iterations')});
-            meas_delay = num2str(str2double(extractXMLdataline(rel_text{contains(rel_text,'MeasurementDelay')}))*10^6);
-            meas_gap = num2str(str2double(extractXMLdataline(rel_text{contains(rel_text,'MeasurementGap')}))*10^3);
-            rel_str = rel_text{contains(rel_text,'AmplitudeLevels')};
-            amp_lev = rel_str((strfind(rel_str,'Count=')+7):(strfind(rel_str,'>')-2));
-            names{i} = [exp_name,newline,...
-                'Max Amp. = ',max_curr,'cu',newline,...
-                'Min Amp. = ',min_curr,'cu',newline,...
-                'Phase Dur. = ',phase_dur,'us',newline,...
-                'Iterations = ',iter,newline,...
-                'Measurement Delay = ',meas_delay,'us',newline,...
-                'Measurement Gap = ',meas_gap,'ms',newline,...
-                'Levels = ',amp_lev,newline];
-        elseif any(contains(rel_text,'Masker')) %Masker/Probe type
-            mask_curr = extractXMLdataline(rel_text{contains(rel_text,'Masker Unit')});
-            probe_curr = extractXMLdataline(rel_text{contains(rel_text,'Probe Unit')});
-            phase_dur = num2str(str2double(extractXMLdataline(rel_text{contains(rel_text,'PhaseDuration')}))*10^6);
-            iter = extractXMLdataline(rel_text{contains(rel_text,'Iterations')});
-            meas_delay = num2str(str2double(extractXMLdataline(rel_text{contains(rel_text,'MeasurementDelay')}))*10^6);
-            meas_gap = num2str(str2double(extractXMLdataline(rel_text{contains(rel_text,'MeasurementGap')}))*10^3);
-            names{i} = [exp_name,newline,...
-                'Masker Amp. = ',mask_curr,'cu',newline,...
-                'Probe Amp. = ',probe_curr,'cu',newline,...
-                'Phase Dur. = ',phase_dur,'us',newline,...
-                'Iterations = ',iter,newline,...
-                'Measurement Delay = ',meas_delay,'us',newline,...
-                'Measurement Gap = ',meas_gap,'ms',newline];
-        elseif any(contains(rel_text,'Setup FunctionType="AdvancedSetup"'))
-            amp_curr = extractXMLdataline(rel_text{contains(rel_text,'Amplitude Unit')});
-            phase_dur = num2str(str2double(extractXMLdataline(rel_text{contains(rel_text,'PhaseDuration')}))*10^6);
-            meas_delay = num2str(str2double(extractXMLdataline(rel_text{contains(rel_text,'MeasurementDelay')}))*10^6);
-            meas_gap = num2str(str2double(extractXMLdataline(rel_text{contains(rel_text,'MeasurementWindow')}))*10^3);
-            names{i} = [exp_name,newline,...
-                'Current Amp. = ',amp_curr,'cu',newline,...
-                'Phase Dur. = ',phase_dur,'us',newline,...
-                'Measurement Delay = ',meas_delay,'us',newline,...
-                'Measurement Window = ',meas_gap,'ms',newline];
-        end
-    end
-    names = join(names,newline);
-    txt = [txt,names{:},newline];
+if any(contains(fdata,'ArtData Create')) % no ART
     exp_start = find(contains(fdata,'<ArtData'),1,'first');
     exp_end = find(contains(fdata,'</ArtData'),1,'last');
     rel_text = fdata(exp_start:exp_end);
@@ -258,25 +203,47 @@ if ~isempty(ART_names) % no ART
             end
         end
     end
-    max_date_ART = max(ART_data.Date);
+    date_ART = char(min(ART_data.Date));
 else
-    max_date_ART = NaT;
+    date_ART = '';
 end
-%% Save .txt file
-max_date = max([max_date_IFT,max_date_ART]);
-if isnat(max_date)
-    date = '';
-    time = '';
-else
-    date = datestr(max_date,'yyyy-mm-dd');
-    time = datestr(max_date,'HH:MM');
+%% Save CRF
+CRF_path = [Maestro_Path(1:(strfind(Maestro_Path,'Study')-1)),'CRFs',filesep];
+subject = sub;
+visit = strrep(vis,'Visit','Visit ');
+source_path = cd;
+dateval = [date_IFT,', ',date_ART];
+ART_msg = 'Collected';
+if isempty(date_ART)
+    ART_msg = 'Not collected; test optional--not a protocol deviation';
+    dateval = dateval(1:end-2);
 end
-txt = ['Subject: ',sub,newline,'Visit: ',vis,...
-    ' Date: ',date,' Time: ',time,newline,...
-    'Condition/Implant Setting: Off',newline,...
-    'Experimenter: ',newline,newline,txt];
-%Write the text file and end the script
-fid = fopen([Maestro_Path,filesep,'SubjectInfo.txt'],'w');
-fprintf(fid,'%s',txt);
-fclose(fid);
+switch subject
+    case {'MVI011R031','MVI012R897','MVI013R864'}
+        fold = 'IRB00335294 NIDCD';
+    case {'MVI014R1219','MVI015R1209','R164','R1054'}
+        fold = 'IRB00346924 NIA';
+    otherwise %old protocol for MVI1-10 and R205
+        fold = 'NA_00051349';
+end
+protocol = strrep(strrep(fold,' NIA',''),' NIDCD','');
+visit_fold = extractfield(dir([CRF_path,fold,filesep,subject,filesep,visit,' *-*']),'name');
+if isempty(visit_fold) %Non typical visit name found
+    visit_fold = {'Visit Nx - (Day XXX) Monitor - X yrs Post-Act - visit applicable only if device still act'};
+end
+out_path = [CRF_path,fold,filesep,subject,filesep,visit_fold{:},filesep,...
+    '14_06 eIFT_eCAP',filesep,'14_06_CRF_eIFT_eCAP_',subject,'_',visit];
+% Make text
+CRF_txt = ['Case Report Form Protocol: ',protocol,newline,...
+    'Case Report Form Version: 2024-03-29',newline,...
+    'Case Report Form Test: eIFT, eCAP',newline,...
+    'Subject ID: ',subject,newline,'Visit: ',visit,newline,...
+    'eIFT: Collected',newline,'eCAP: ',ART_msg,newline,...
+    'Examiners: ',examiner,newline,'Times: ',dateval,newline,'Source Data: ',source_path];
+%Make the figure that will be used for the PDFs (single page)
+fig = figure(1);
+set(fig,'Units','inches','Position',[1 1 8.5 11],'Color','w');
+clf;
+annotation('textbox','Position',[0 0 1 1],'EdgeColor','none','String',CRF_txt,'FitBoxToText','on','Interpreter', 'none')
+saveas(fig,[out_path,'.pdf'])
 end
